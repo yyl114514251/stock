@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>幻盘 · 模拟炒股实训平台</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- 顶部风险提示条 -->
+  <div class="risk-banner">
+    ⚠️ 【风险提示】本系统为纯模拟炒股实训工具，全部资金为虚拟资金，模拟交易结果不代表真实投资收益，不构成任何投资建议。不对接真实券商，不涉及真实资金。
+  </div>
+
+  <div class="app">
+    <!-- 顶部导航 -->
+    <header class="header">
+      <div class="logo-area">
+        <span class="logo-icon">📈</span>
+        <div>
+          <h1>幻盘 <span class="badge">模拟炒股实训</span></h1>
+          <p class="subtitle" id="marketStatus">实时模拟模式 · 当前日期：--</p>
+        </div>
+      </div>
+      <div class="header-account">
+        <div class="account-mini">
+          <span class="am-label">总资产</span>
+          <span class="am-value" id="headerTotalAsset">--</span>
+        </div>
+        <div class="account-mini">
+          <span class="am-label">总盈亏</span>
+          <span class="am-value" id="headerTotalProfit">--</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="btnSettings">⚙️ 设置</button>
+      </div>
+    </header>
+
+    <!-- 主导航 -->
+    <nav class="main-nav">
+      <div class="nav-item active" data-page="home">🏠 首页</div>
+      <div class="nav-item" data-page="market">📊 行情交易</div>
+      <div class="nav-item" data-page="positions">💼 我的持仓</div>
+      <div class="nav-item" data-page="orders">📋 委托记录</div>
+      <div class="nav-item" data-page="trades">📝 成交记录</div>
+      <div class="nav-item" data-page="report">📈 复盘报告</div>
+      <div class="nav-item" data-page="backtest">⏳ 历史回溯</div>
+      <div class="nav-item" data-page="ranking">🏆 排行榜</div>
+    </nav>
+
+    <main class="main">
+      <!-- ========== 首页 ========== -->
+      <section class="page active" id="page-home">
+        <div class="home-grid">
+          <div class="card account-card">
+            <h3 class="card-title">💰 账户总览</h3>
+            <div class="account-big">
+              <div class="ab-item"><span class="ab-label">总资产</span><span class="ab-value" id="homeTotalAsset">--</span></div>
+              <div class="ab-item"><span class="ab-label">总盈亏</span><span class="ab-value" id="homeTotalProfit">--</span></div>
+              <div class="ab-item"><span class="ab-label">收益率</span><span class="ab-value" id="homeTotalReturn">--</span></div>
+            </div>
+            <div class="account-detail">
+              <div class="ad-row"><span>可用资金</span><span id="homeCash">--</span></div>
+              <div class="ad-row"><span>冻结资金</span><span id="homeFrozen">--</span></div>
+              <div class="ad-row"><span>持仓市值</span><span id="homeMarketValue">--</span></div>
+              <div class="ad-row"><span>持仓数量</span><span id="homePosCount">--</span></div>
+              <div class="ad-row"><span>交易次数</span><span id="homeTradeCount">--</span></div>
+              <div class="ad-row"><span>累计手续费</span><span id="homeCommission">--</span></div>
+            </div>
+          </div>
+
+          <div class="card chart-card">
+            <h3 class="card-title">📈 净值曲线</h3>
+            <canvas id="equityCanvas"></canvas>
+            <div class="chart-legend">
+              <span><i class="dot dot-blue"></i>账户净值</span>
+              <span><i class="dot dot-gray"></i>初始本金</span>
+            </div>
+          </div>
+
+          <div class="card quick-card">
+            <h3 class="card-title">⚡ 快捷操作</h3>
+            <div class="quick-grid">
+              <button class="quick-btn" onclick="switchPage('market')">📊 行情交易</button>
+              <button class="quick-btn" onclick="switchPage('positions')">💼 查看持仓</button>
+              <button class="quick-btn" onclick="switchPage('backtest')">⏳ 历史回溯</button>
+              <button class="quick-btn" onclick="switchPage('report')">📈 复盘报告</button>
+            </div>
+            <div class="mode-switch">
+              <h4>交易模式</h4>
+              <div class="mode-btns">
+                <button class="mode-btn active" id="modeRealtime">实时模拟</button>
+                <button class="mode-btn" id="modeBacktest">历史回溯</button>
+              </div>
+              <p class="mode-desc" id="modeDesc">跟随模拟行情实时交易，每10秒自动推进一个交易日</p>
+            </div>
+          </div>
+
+          <div class="card hot-card">
+            <h3 class="card-title">🔥 热门股票</h3>
+            <div class="hot-list" id="hotList"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== 行情交易页 ========== -->
+      <section class="page" id="page-market">
+        <div class="market-layout">
+          <div class="market-left">
+            <div class="card search-card">
+              <div class="search-box">
+                <input type="text" id="stockSearch" placeholder="输入股票代码/名称/行业搜索..." />
+                <button class="btn btn-primary btn-sm" onclick="searchStock()">搜索</button>
+              </div>
+              <div class="search-results" id="searchResults"></div>
+            </div>
+            <div class="card stock-info-card">
+              <div class="stock-header">
+                <div>
+                  <span class="stock-name" id="stockName">--</span>
+                  <span class="stock-code" id="stockCode">--</span>
+                </div>
+                <div class="stock-price">
+                  <span id="stockPrice">--</span>
+                  <span id="stockChange">--</span>
+                </div>
+              </div>
+              <div class="stock-meta">
+                <span>行业：<b id="stockIndustry">--</b></span>
+                <span>概念：<b id="stockConcept">--</b></span>
+                <span id="stockLimitTag"></span>
+              </div>
+            </div>
+            <div class="card kline-card">
+              <div class="kline-toolbar">
+                <span class="kline-title">K线图</span>
+                <div class="kline-period">
+                  <button class="kp-btn active" data-count="40">40日</button>
+                  <button class="kp-btn" data-count="80">80日</button>
+                  <button class="kp-btn" data-count="120">120日</button>
+                  <button class="kp-btn" data-count="250">年线</button>
+                </div>
+              </div>
+              <canvas id="klineCanvas"></canvas>
+              <canvas id="volumeCanvas"></canvas>
+            </div>
+          </div>
+
+          <div class="market-right">
+            <div class="card orderbook-card">
+              <h3 class="card-title">五档盘口</h3>
+              <div class="orderbook" id="orderbook">
+                <div class="ob-asks"></div>
+                <div class="ob-current"></div>
+                <div class="ob-bids"></div>
+              </div>
+            </div>
+
+            <div class="card trade-card">
+              <h3 class="card-title">交易下单</h3>
+              <div class="trade-tabs">
+                <button class="trade-tab active" data-side="buy">买入</button>
+                <button class="trade-tab" data-side="sell">卖出</button>
+              </div>
+              <div class="trade-form">
+                <div class="tf-row">
+                  <label>委托价格</label>
+                  <input type="number" id="orderPrice" step="0.01" placeholder="限价" />
+                  <label class="tf-check"><input type="checkbox" id="orderMarket" /> 市价</label>
+                </div>
+                <div class="tf-row">
+                  <label>委托数量</label>
+                  <input type="number" id="orderQty" step="100" placeholder="股（100整数倍）" />
+                </div>
+                <div class="tf-quick">
+                  <button class="qty-btn" data-pct="0.25">1/4</button>
+                  <button class="qty-btn" data-pct="0.5">1/2</button>
+                  <button class="qty-btn" data-pct="0.75">3/4</button>
+                  <button class="qty-btn" data-pct="1">全仓</button>
+                </div>
+                <div class="tf-info">
+                  <div><span>可用资金</span><b id="tfCash">--</b></div>
+                  <div><span>可买数量</span><b id="tfCanBuy">--</b></div>
+                  <div><span>可卖数量</span><b id="tfCanSell">--</b></div>
+                  <div><span>预计金额</span><b id="tfAmount">--</b></div>
+                </div>
+                <button class="btn btn-submit" id="btnSubmitOrder">买入</button>
+                <div class="tf-msg" id="tradeMsg"></div>
+              </div>
+            </div>
+
+            <div class="card pending-card">
+              <h3 class="card-title">当前委托</h3>
+              <div class="pending-list" id="pendingList"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== 持仓页 ========== -->
+      <section class="page" id="page-positions">
+        <div class="card">
+          <h3 class="card-title">💼 我的持仓</h3>
+          <div class="table-wrap">
+            <table class="data-table" id="positionsTable">
+              <thead><tr><th>股票代码</th><th>股票名称</th><th>持仓数量</th><th>可卖数量</th><th>成本价</th><th>现价</th><th>市值</th><th>盈亏</th><th>盈亏比</th><th>操作</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="empty-tip" id="positionsEmpty">暂无持仓，去<a onclick="switchPage('market')">行情交易</a>买入股票吧</div>
+        </div>
+      </section>
+
+      <!-- ========== 委托页 ========== -->
+      <section class="page" id="page-orders">
+        <div class="card">
+          <h3 class="card-title">📋 委托记录</h3>
+          <div class="table-wrap">
+            <table class="data-table" id="ordersTable">
+              <thead><tr><th>委托编号</th><th>时间</th><th>股票</th><th>方向</th><th>类型</th><th>委托价</th><th>委托量</th><th>成交量</th><th>状态</th><th>操作</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="empty-tip" id="ordersEmpty">暂无委托记录</div>
+        </div>
+      </section>
+
+      <!-- ========== 成交页 ========== -->
+      <section class="page" id="page-trades">
+        <div class="card">
+          <h3 class="card-title">📝 成交记录</h3>
+          <div class="table-wrap">
+            <table class="data-table" id="tradesTable">
+              <thead><tr><th>成交编号</th><th>时间</th><th>股票</th><th>方向</th><th>成交价</th><th>成交量</th><th>成交金额</th><th>佣金</th><th>印花税</th><th>过户费</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="empty-tip" id="tradesEmpty">暂无成交记录</div>
+        </div>
+      </section>
+
+      <!-- ========== 复盘报告页 ========== -->
+      <section class="page" id="page-report">
+        <div class="report-grid">
+          <div class="card">
+            <h3 class="card-title">📊 核心指标</h3>
+            <div class="stat-grid" id="reportStats"></div>
+          </div>
+          <div class="card">
+            <h3 class="card-title">📈 净值曲线</h3>
+            <canvas id="reportEquityCanvas"></canvas>
+          </div>
+          <div class="card">
+            <h3 class="card-title">📉 回撤分析</h3>
+            <canvas id="drawdownCanvas"></canvas>
+          </div>
+          <div class="card">
+            <h3 class="card-title">🏭 行业仓位分布</h3>
+            <div class="industry-list" id="industryList"></div>
+          </div>
+          <div class="card full-width">
+            <h3 class="card-title">📋 交易行为分析</h3>
+            <div class="behavior-analysis" id="behaviorAnalysis"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== 历史回溯页 ========== -->
+      <section class="page" id="page-backtest">
+        <div class="card">
+          <h3 class="card-title">⏳ 历史时光回溯模式</h3>
+          <p class="backtest-desc">选择一个历史时间点，系统将切回到该时刻，使用当时的历史行情进行模拟交易。<b>严格禁止未来函数</b>：只能看到该时间点之前的行情数据，未来K线完全不可见。回溯模式是独立沙盘，不影响主账户资产。</p>
+          <div class="backtest-setup">
+            <div class="bt-row">
+              <label>选择回溯起始日期</label>
+              <select id="backtestDate"></select>
+            </div>
+            <div class="bt-row">
+              <label>初始虚拟本金</label>
+              <select id="backtestCapital">
+                <option value="100000">10万</option>
+                <option value="500000">50万</option>
+                <option value="1000000" selected>100万</option>
+                <option value="5000000">500万</option>
+                <option value="10000000">1000万</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" id="btnStartBacktest">🚀 进入回溯沙盘</button>
+          </div>
+          <div class="backtest-status" id="backtestStatus" style="display:none;">
+            <div class="bt-info">
+              <span>回溯日期：<b id="btDate">--</b></span>
+              <span>已推进：<b id="btDays">0</b> 个交易日</span>
+              <span>沙盘总资产：<b id="btAsset">--</b></span>
+            </div>
+            <div class="bt-controls">
+              <button class="btn btn-secondary" id="btnNextDay">⏭ 推进1天</button>
+              <button class="btn btn-secondary" id="btnAutoPlay">▶ 自动推进</button>
+              <button class="btn btn-danger" id="btnExitBacktest">退出回溯</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== 排行榜页 ========== -->
+      <section class="page" id="page-ranking">
+        <div class="card">
+          <h3 class="card-title">🏆 模拟交易排行榜</h3>
+          <div class="rank-tabs">
+            <button class="rank-tab active" data-type="total">总收益榜</button>
+            <button class="rank-tab" data-type="month">月度收益榜</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table rank-table" id="rankingTable">
+              <thead><tr><th>排名</th><th>用户</th><th>总资产</th><th>总收益</th><th>收益率</th><th>胜率</th><th>最大回撤</th><th>交易次数</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <p class="rank-note">排行榜数据为模拟生成，用于展示平台功能。你的成绩会自动加入排行榜。</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- 设置弹窗 -->
+    <div class="modal-overlay" id="settingsModal" style="display:none;">
+      <div class="modal">
+        <div class="modal-head"><h2>⚙️ 账户设置</h2><button class="modal-close" onclick="closeModal('settingsModal')">×</button></div>
+        <div class="modal-body">
+          <div class="setting-row">
+            <label>初始虚拟本金</label>
+            <select id="settingCapital">
+              <option value="100000">10万</option>
+              <option value="500000">50万</option>
+              <option value="1000000" selected>100万</option>
+              <option value="5000000">500万</option>
+              <option value="10000000">1000万</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <label>自动推进速度</label>
+            <select id="settingSpeed">
+              <option value="3000">快（3秒/天）</option>
+              <option value="10000" selected>中（10秒/天）</option>
+              <option value="30000">慢（30秒/天）</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <label>数据管理</label>
+            <div>
+              <button class="btn btn-secondary btn-sm" onclick="saveData()">💾 保存数据</button>
+              <button class="btn btn-danger btn-sm" onclick="resetAccount()">🔄 重置账户</button>
+            </div>
+          </div>
+          <p class="setting-note">⚠️ 重置账户将清空所有持仓、委托、成交和历史记录，不可恢复。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 风险提示弹窗 -->
+    <div class="modal-overlay" id="riskModal">
+      <div class="modal risk-modal">
+        <div class="modal-head"><h2>⚠️ 风险提示</h2></div>
+        <div class="modal-body">
+          <div class="risk-content">
+            <p><strong>本系统为纯模拟炒股实训工具</strong>，全部资金为虚拟资金，不涉及任何真实货币交易。</p>
+            <p>模拟交易结果<strong>不代表真实投资收益</strong>，不构成任何投资建议。</p>
+            <p>本软件<strong>不对接真实券商</strong>，不处理用户真实资金。</p>
+            <p>股市有风险，投资需谨慎。真实投资请咨询持牌专业人士。</p>
+          </div>
+          <label class="risk-agree"><input type="checkbox" id="riskAgree" /> 我已阅读并理解上述风险提示</label>
+          <button class="btn btn-primary" id="btnRiskConfirm" disabled>进入平台</button>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <p>幻盘 · 模拟炒股实训平台 | A股交易规则完整还原 | T+1 · 涨跌停 · 集合竞价 | 纯虚拟资金实训</p>
+      <p class="footer-risk">⚠️ 本平台仅为交易实训工具，模拟交易收益不代表实盘收益，不构成任何投资建议。</p>
+    </footer>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="engine.js"></script>
+  <script src="chart.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
